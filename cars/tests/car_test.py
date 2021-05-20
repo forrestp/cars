@@ -1,246 +1,121 @@
 import json
-import random
 from datetime import datetime
 
 import factory
+from django.core import management
+from django.test import TestCase
+from django.urls import reverse
 from faker import Factory
-from graphene_django.utils.testing import GraphQLTestCase
-from graphene_django.utils.utils import camelize
-from graphql_relay import to_global_id
+from rest_framework import status
+from rest_framework.test import APIClient
 
-from cars.models import Car, Trim
-from cars.types import CarNode, TrimNode
-
+from ..models import Car
 from .factories import CarFactory, TrimFactory
 
 faker = Factory.create()
 
 
-class Car_Test(GraphQLTestCase):
+class Car_Test(TestCase):
     def setUp(self):
-        self.GRAPHQL_URL = "/graphql"
+        self.api_client = APIClient()
         CarFactory.create_batch(size=3)
+        self.trim = TrimFactory.create()
 
     def test_create_car(self):
         """
         Ensure we can create a new car object.
         """
-        trim = TrimFactory.create()
+        client = self.api_client
+        car_count = Car.objects.count()
+        car_dict = factory.build(dict, FACTORY_CLASS=CarFactory, trim=self.trim.id)
+        response = client.post(reverse('car-list'), car_dict)
+        created_car_pk = response.data['id']
+        assert response.status_code == status.HTTP_201_CREATED
+        assert Car.objects.count() == car_count + 1
+        car = Car.objects.get(pk=created_car_pk)
 
-        car_dict = camelize(factory.build(dict, FACTORY_CLASS=CarFactory,
-                                          trim=to_global_id(TrimNode._meta.name, trim.id)))
+        assert car_dict['owner'] == car.owner
+        assert car_dict['color'] == car.color
+        assert car_dict['year'] == car.year
 
-        response = self.query(
-            """
-            mutation($input: CreateCarInput!) {
-                createCar(input: $input) {
-                    clientMutationId,
-                    car {
-                        id
-                        owner
-                        color
-                        year
-                        trim {
-                          id
-                        }
-                    }
-                }
-            }
-            """,
-            input_data={'data': car_dict}
-        )
-        content = json.loads(response.content)
-        generated_car = content['data']['createCar']['car']
-        self.assertResponseNoErrors(response)
-        self.assertEquals(car_dict['owner'], generated_car['owner'])
-        self.assertEquals(car_dict['color'], generated_car['color'])
-        self.assertEquals(car_dict['year'], generated_car['year'])
-        self.assertEquals(car_dict['trim'], generated_car['trim']['id'])
+    def test_get_one(self):
+        client = self.api_client
+        car_pk = Car.objects.first().pk
+        car_detail_url = reverse('car-detail', kwargs={'pk': car_pk})
+        response = client.get(car_detail_url)
+        assert response.status_code == status.HTTP_200_OK
 
     def test_fetch_all(self):
         """
-        Create 3 objects, fetch all using allCar query and check that the 3 objects are returned following
-        Relay standards.
+        Create 3 objects, do a fetch all call and check if you get back 3 objects
         """
-        response = self.query(
-            """
-            query {
-                allCar{
-                    edges{
-                        node{
-                            id
-                            owner
-                            color
-                            year
-                        }
-                    }
-                }
-            }
-            """
-        )
-        self.assertResponseNoErrors(response)
-        content = json.loads(response.content)
-        car_list = content['data']['allCar']['edges']
-        car_list_qs = Car.objects.all()
-        for i, edge in enumerate(car_list):
-            car = edge['node']
-            self.assertEquals(car['id'], to_global_id(CarNode._meta.name, car_list_qs[i].id))
-            self.assertEquals(car['owner'], car_list_qs[i].owner)
-            self.assertEquals(car['color'], car_list_qs[i].color)
-            self.assertEquals(car['year'], car_list_qs[i].year)
+        client = self.api_client
+        response = client.get(reverse('car-list'))
+        assert response.status_code == status.HTTP_200_OK
+        assert Car.objects.count() == len(response.data)
 
-    def test_delete_mutation(self):
+    def test_delete(self):
         """
-        Create 3 objects, fetch all using allCar query and check that the 3 objects are returned.
+        Create 3 objects, do a fetch all call and check if you get back 3 objects.
         Then in a loop, delete one at a time and check that you get the correct number back on a fetch all.
         """
-        list_query = """
-            query {
-                allCar{
-                    edges{
-                        node{
-                            id
-                        }
-                    }
-                }
-            }
-            """
-        response = self.query(list_query)
-        self.assertResponseNoErrors(response)
-        content = json.loads(response.content)
-        car_list = content['data']['allCar']['edges']
-        car_count = len(car_list)
-        for i, edge in enumerate(car_list, start=1):
-            car = edge['node']
-            car_id = car['id']
-            response = self.query(
-                """
-                mutation($input:DeleteCarInput!) {
-                   deleteCar(input: $input)
-                   {
-                       ok
-                    }
-                }
-                """, input_data={'id': car_id})
-            response = self.query(list_query)
-            content = json.loads(response.content)
-            car_list = content['data']['allCar']['edges']
-            new_len = len(car_list)
-            assert car_count - i == new_len
+        client = self.api_client
+        car_qs = Car.objects.all()
+        car_count = Car.objects.count()
 
-    def test_update_mutation_correct(self):
+        for i, car in enumerate(car_qs, start=1):
+            response = client.delete(reverse('car-detail', kwargs={'pk': car.pk}))
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert car_count - i == Car.objects.count()
+
+    def test_update_correct(self):
         """
         Add an object. Call an update with 2 (or more) fields updated.
         Fetch the object back and confirm that the update was successful.
         """
-        car = CarFactory.create()
-        car_id = to_global_id(CarNode._meta.name, car.pk)
-        car_dict = factory.build(dict, FACTORY_CLASS=CarFactory)
-        response = self.query(
-            """
-            mutation($input: UpdateCarInput!){
-                updateCar(input: $input) {
-                    car{
-                        owner
-                        color
-                        year
-                    }
-                }
-            }
-            """,
-            input_data={
-                'id': car_id,
-                'data': {
-                    'owner': car_dict['owner'],
-                    'color': car_dict['color'],
-                    'year': car_dict['year'],
-                }
-            }
-        )
-        self.assertResponseNoErrors(response)
-        parsed_response = json.loads(response.content)
-        updated_car_data = parsed_response['data']['updateCar']['car']
-        self.assertEquals(updated_car_data['owner'], car_dict['owner'])
-        self.assertEquals(updated_car_data['color'], car_dict['color'])
-        self.assertEquals(updated_car_data['year'], car_dict['year'])
+        client = self.api_client
+        car_pk = Car.objects.first().pk
+        car_detail_url = reverse('car-detail', kwargs={'pk': car_pk})
+        car_dict = factory.build(dict, FACTORY_CLASS=CarFactory, trim=self.trim.id)
+        response = client.patch(car_detail_url, data=car_dict)
+        assert response.status_code == status.HTTP_200_OK
 
-    def test_update_mutation_owner_with_incorrect_value_data_type(self):
-        """
-        Add an object. Call an update with 2 (or more) fields updated with values that are expected to fail.
-        Fetch the object back and confirm that the fields were not updated (even partially).
-        """
-        car = CarFactory.create()
-        car_id = to_global_id(CarNode._meta.name, car.pk)
-        random_int = faker.pyint()
-        response = self.query(
-            """
-            mutation{
-                updateCar(input: {
-                    id: "%s",
-                    data:{
-                        owner: %s
-                    }
-                }) {
-                    car{
-                        owner
-                    }
-                }
-            }
-            """
-            % (car_id, random_int)
-        )
-        self.assertResponseHasErrors(response)
+        assert car_dict['owner'] == response.data['owner']
+        assert car_dict['color'] == response.data['color']
+        assert car_dict['year'] == response.data['year']
 
-    def test_update_mutation_color_with_incorrect_value_data_type(self):
-        """
-        Add an object. Call an update with 2 (or more) fields updated with values that are expected to fail.
-        Fetch the object back and confirm that the fields were not updated (even partially).
-        """
-        car = CarFactory.create()
-        car_id = to_global_id(CarNode._meta.name, car.pk)
-        random_str = faker.pystr()
-        response = self.query(
-            """
-            mutation{
-                updateCar(input: {
-                    id: "%s",
-                    data:{
-                        color: %s
-                    }
-                }) {
-                    car{
-                        color
-                    }
-                }
-            }
-            """
-            % (car_id, random_str)
-        )
-        self.assertResponseHasErrors(response)
+    def test_update_year_with_incorrect_value_data_type(self):
+        client = self.api_client
+        car = Car.objects.first()
+        car_detail_url = reverse('car-detail', kwargs={'pk': car.pk})
+        car_year = car.year
+        data = {
+            'year': faker.pystr(),
+        }
+        response = client.patch(car_detail_url, data=data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert car_year == Car.objects.first().year
 
-    def test_update_mutation_year_with_incorrect_value_data_type(self):
-        """
-        Add an object. Call an update with 2 (or more) fields updated with values that are expected to fail.
-        Fetch the object back and confirm that the fields were not updated (even partially).
-        """
-        car = CarFactory.create()
-        car_id = to_global_id(CarNode._meta.name, car.pk)
-        random_str = faker.pystr()
-        response = self.query(
-            """
-            mutation{
-                updateCar(input: {
-                    id: "%s",
-                    data:{
-                        year: %s
-                    }
-                }) {
-                    car{
-                        year
-                    }
-                }
-            }
-            """
-            % (car_id, random_str)
-        )
-        self.assertResponseHasErrors(response)
+    def test_update_owner_with_incorrect_value_outside_constraints(self):
+        client = self.api_client
+        car = Car.objects.first()
+        car_detail_url = reverse('car-detail', kwargs={'pk': car.pk})
+        car_owner = car.owner
+        data = {
+            'owner': faker.pystr(min_chars=256, max_chars=256),
+        }
+        response = client.patch(car_detail_url, data=data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert car_owner == Car.objects.first().owner
+
+    def test_update_color_with_incorrect_value_outside_constraints(self):
+        client = self.api_client
+        car = Car.objects.first()
+        car_detail_url = reverse('car-detail', kwargs={'pk': car.pk})
+        car_color = car.color
+        data = {
+            'color': faker.pystr(min_chars=256, max_chars=256),
+        }
+        response = client.patch(car_detail_url, data=data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert car_color == Car.objects.first().color
