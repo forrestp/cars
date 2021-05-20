@@ -1,0 +1,31 @@
+name: run linter
+
+on:
+  push:
+
+jobs:
+  lint:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # To tests more versions or os, see https://docs.github.com/en/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+        os: [ubuntu-latest]
+        python-version: [3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: install package manager and dependencies
+        run: make installdeps
+      - name: run lint
+        run: |
+          ~/.venv/demo/bin/autopep8 cars -r -d --exit-code
+          ~/.venv/demo/bin/isort cars --diff -c

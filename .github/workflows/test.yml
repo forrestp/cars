@@ -1,0 +1,43 @@
+name: run tests
+
+on:
+  push:
+  schedule:
+    - cron:  '0 16 * * *'
+  
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # To tests more versions or os, see https://docs.github.com/en/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+        os: [ubuntu-latest]
+        python-version: [3.9]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: install package manager and dependencies
+        run: make install
+
+      - name: run coverage
+        run: |
+            make coverage
+            ~/.venv/cars/bin/coverage xml
+      # Uncomment after setting CODECOV_TOKEN in your repository
+      #- name: Upload coverage to Codecov
+      #  uses: codecov/codecov-action@v1
+      #  with:
+      #    token: ${{ secrets.CODECOV_TOKEN }}
+      #    files: ./coverage.xml            
+      #    env_vars: OS,PYTHON
+      #    name: codecov-umbrella
+      #    fail_ci_if_error: true
