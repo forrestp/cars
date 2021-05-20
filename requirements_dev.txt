@@ -4,4 +4,4 @@ django-stubs==1.8.0
 autopep8==1.5.4
 flake8==3.9.1
 isort==5.8.0
-mypy==0.790
+mypy==0.812
