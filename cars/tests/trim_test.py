@@ -181,3 +181,52 @@ class Trim_Test(GraphQLTestCase):
             % (trim_id, random_int)
         )
         self.assertResponseHasErrors(response)
+
+    def test_create_mutation_name_violates_unique_together_with_model(self):
+        model = ModelFactory.create()
+
+        trim_dict = camelize(factory.build(dict, FACTORY_CLASS=TrimFactory,
+                                           model=to_global_id(ModelNode._meta.name, model.id)))
+
+        response = self.query(
+            """
+            mutation($input: CreateTrimInput!) {
+                createTrim(input: $input) {
+                    clientMutationId,
+                    trim {
+                        id
+                        name
+                        model {
+                          id
+                        }
+                    }
+                }
+            }
+            """,
+            input_data={'data': trim_dict}
+        )
+        content = json.loads(response.content)
+        generated_trim = content['data']['createTrim']['trim']
+        self.assertResponseNoErrors(response)
+        self.assertEquals(trim_dict['name'], generated_trim['name'])
+        self.assertEquals(trim_dict['model'], generated_trim['model']['id'])
+
+        # duplicate entry should violate unique constraint
+        response = self.query(
+            """
+            mutation($input: CreateTrimInput!) {
+                createTrim(input: $input) {
+                    clientMutationId,
+                    trim {
+                        id
+                        name
+                        model {
+                          id
+                        }
+                    }
+                }
+            }
+            """,
+            input_data={'data': trim_dict}
+        )
+        self.assertResponseHasErrors(response)

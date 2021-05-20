@@ -181,3 +181,54 @@ class Model_Test(GraphQLTestCase):
             % (model_id, random_int)
         )
         self.assertResponseHasErrors(response)
+
+    def test_create_mutation_name_violates_unique_together_with_make(self):
+        """
+        Add an object. Call an update with 2 (or more) fields updated with values that are expected to fail.
+        Fetch the object back and confirm that the fields were not updated (even partially).
+        """
+        make = MakeFactory.create()
+        model_dict = camelize(factory.build(dict, FACTORY_CLASS=ModelFactory,
+                                            make=to_global_id(MakeNode._meta.name, make.id)))
+
+        response = self.query(
+            """
+            mutation($input: CreateModelInput!) {
+                createModel(input: $input) {
+                    clientMutationId,
+                    model {
+                        id
+                        name
+                        make {
+                          id
+                        }
+                    }
+                }
+            }
+            """,
+            input_data={'data': model_dict}
+        )
+        content = json.loads(response.content)
+        generated_model = content['data']['createModel']['model']
+        self.assertResponseNoErrors(response)
+        self.assertEquals(model_dict['name'], generated_model['name'])
+        self.assertEquals(model_dict['make'], generated_model['make']['id'])
+
+        response = self.query(
+            """
+            mutation($input: CreateModelInput!) {
+                createModel(input: $input) {
+                    clientMutationId,
+                    model {
+                        id
+                        name
+                        make {
+                          id
+                        }
+                    }
+                }
+            }
+            """,
+            input_data={'data': model_dict}
+        )
+        self.assertResponseHasErrors(response)
