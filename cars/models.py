@@ -20,6 +20,9 @@ class Model(models.Model):
 
     class Meta:
         db_table = "model"
+        unique_together = (
+            ('name', 'make'),
+        )
 
     def __str__(self):
         return f"{self.make} {self.name}"
@@ -32,6 +35,9 @@ class Trim(models.Model):
 
     class Meta:
         db_table = "trim"
+        unique_together = (
+            ('name', 'model'),
+        )
 
     def __str__(self):
         return f"{self.model} {self.name}"
