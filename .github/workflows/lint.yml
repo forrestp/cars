@@ -10,7 +10,7 @@ jobs:
       matrix:
         # To tests more versions or os, see https://docs.github.com/en/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
         os: [ubuntu-latest]
-        python-version: [3.9]
+        python-version: [3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -20,12 +20,12 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements_dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: install package manager and dependencies
         run: make installdeps
       - name: run lint
         run: |
-          ~/.venv/demo/bin/autopep8 cars -r -d --exit-code
-          ~/.venv/demo/bin/isort cars --diff -c
+          ~/.venv/cars/bin/autopep8 cars -r -d --exit-code
+          ~/.venv/cars/bin/isort cars --diff -c
