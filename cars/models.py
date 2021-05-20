@@ -10,6 +10,9 @@ class Make(models.Model):
     class Meta:
         db_table = "make"
 
+    def __str__(self):
+        return self.name
+
 
 class Model(models.Model):
 
@@ -20,6 +23,9 @@ class Model(models.Model):
     class Meta:
         db_table = "model"
 
+    def __str__(self):
+        return f"{self.make} {self.name}"
+
 
 class Trim(models.Model):
 
@@ -29,6 +35,9 @@ class Trim(models.Model):
 
     class Meta:
         db_table = "trim"
+
+    def __str__(self):
+        return f"{self.model} {self.name}"
 
 
 class Car(models.Model):
@@ -54,3 +63,6 @@ class Car(models.Model):
 
     class Meta:
         db_table = "car"
+
+    def __str__(self):
+        return f"{self.owner}'s {self.color.capitalize()} {self.year} {self.trim}"
