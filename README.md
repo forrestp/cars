@@ -33,6 +33,29 @@ $ docker-compose exec web python manage.py migrate
 
 Go to [http://localhost:8000/graphql](http://localhost:8000/graphql)
 
+#### Example queries
+{
+  allCar {
+    edges {
+      node {
+        id
+        owner
+        year
+        color
+        trim {
+          model {
+            make {
+              name
+            }
+            name
+          }
+          name
+        }
+      }
+    }
+  }
+}
+
 ### Run Django admin dashboard
 
 1. Setup a password to login to the Django admin dashboard.
