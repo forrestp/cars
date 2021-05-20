@@ -3,7 +3,6 @@ from django.db import models
 
 
 class Make(models.Model):
-
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, null=True, blank=True, unique=True)
 
@@ -15,7 +14,6 @@ class Make(models.Model):
 
 
 class Model(models.Model):
-
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     make = models.ForeignKey('Make', on_delete=models.CASCADE, related_name='models')
@@ -28,7 +26,6 @@ class Model(models.Model):
 
 
 class Trim(models.Model):
-
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     model = models.ForeignKey('Model', on_delete=models.CASCADE, related_name='trims')

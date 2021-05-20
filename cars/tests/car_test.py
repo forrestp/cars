@@ -28,7 +28,7 @@ class Car_Test(GraphQLTestCase):
         trim = TrimFactory.create()
 
         car_dict = camelize(factory.build(dict, FACTORY_CLASS=CarFactory,
-                            trim=to_global_id(TrimNode._meta.name, trim.id)))
+                                          trim=to_global_id(TrimNode._meta.name, trim.id)))
 
         response = self.query(
             """

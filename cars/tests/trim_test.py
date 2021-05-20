@@ -33,7 +33,7 @@ class Trim_Test(GraphQLTestCase):
         model = ModelFactory.create()
 
         trim_dict = camelize(factory.build(dict, FACTORY_CLASS=TrimFactory,
-                             model=to_global_id(ModelNode._meta.name, model.id)))
+                                           model=to_global_id(ModelNode._meta.name, model.id)))
 
         response = self.query(
             """

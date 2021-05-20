@@ -33,7 +33,7 @@ class Model_Test(GraphQLTestCase):
         make = MakeFactory.create()
 
         model_dict = camelize(factory.build(dict, FACTORY_CLASS=ModelFactory,
-                              make=to_global_id(MakeNode._meta.name, make.id)))
+                                            make=to_global_id(MakeNode._meta.name, make.id)))
 
         response = self.query(
             """
