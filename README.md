@@ -33,7 +33,7 @@ $ docker-compose exec web python manage.py migrate
 
 Go to [http://localhost:8000/graphql](http://localhost:8000/graphql)
 
-## Example queries
+#### Example queries
 {
   allCar {
     edges {
