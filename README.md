@@ -31,7 +31,8 @@ $ docker-compose exec web python manage.py migrate
 
 ### Make API calls against the server
 
-Go to [http://localhost:8000/graphql](http://localhost:8000/graphql)
+1. Go to [http://localhost:8000/swagger](http://localhost:8000/swagger) to see Swagger documentation for API endpoints.
+2. Run the APIs by clicking the "Try it now" button on the Swagger page.
 
 #### Example queries
 {

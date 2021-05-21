@@ -13,7 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent
 # Application definition
 INSTALLED_APPS = [
     'cars.apps.CarsConfig',
-    'graphene_django',
+    'rest_framework',
+    'drf_yasg',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -105,9 +106,18 @@ USE_TZ = True
 STATIC_URL = os.environ.get('STATIC_URL', default='/static/')
 STATIC_ROOT = os.path.join(BASE_DIR, os.environ.get('STATIC_ROOT', default='static'))
 
-GRAPHENE = {
-    "SCHEMA": "project.schema.schema",
-    "ATOMIC_MUTATIONS": True,
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'EXCEPTION_HANDLER': 'cars.error_handling.custom_exception_handler',
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'basic': {
+            'type': 'basic'
+        }
+    },
+    'USE_SESSION_AUTH': False
 }
 
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', default=False)
